@@ -14,6 +14,7 @@ import {
   parseProcStat,
   parseVmStat,
   parseWindowsSample,
+  paneLayout,
   usageRows,
 } from '../hooks/parse'
 import { encodePowerShell, windowsScript } from '../hooks/sources'
@@ -63,12 +64,17 @@ describe('nvidia-smi', () => {
       gpuRamTotal: 2 * GIB,
     })
     expect(parseNvidiaSmi('')).toBe(undefined)
+    expect(parseNvidiaSmi('[N/A], [N/A], [N/A]\n50, 1024, 4096\n')).toEqual(expect.objectContaining({ gpu: 50, gpuCount: 2 }))
   })
 })
 
 describe('macos', () => {
   test('cpu comes from the last top sample', () => {
     expect(parseMacTopCpu(F.MAC_TOP)).toBe(20)
+  })
+
+  test('a decimal-comma locale still parses', () => {
+    expect(parseMacTopCpu('CPU usage: 10,50% user, 9,50% sys, 80,00% idle')).toBe(20)
   })
 
   test('sysctl gives memory size and cores', () => {
@@ -179,6 +185,18 @@ describe('display', () => {
     expect(gib(16 * GIB)).toBe('16.0')
     expect(gib(0.7 * GIB)).toBe('0.7')
     expect(gib(128 * GIB)).toBe('128')
+  })
+
+  test('pane rows fit their width, dropping details before the bar gets too short', () => {
+    const rows = usageRows({ cpu: 5, cpuCores: 4, ram: 4, ramUsed: 0.6 * GIB, ramTotal: 15.7 * GIB })
+    const fits = (columns: number) => {
+      const { barWidth, showDetails } = paneLayout(rows, columns)
+      const widest = 8 + barWidth + 5 + (showDetails ? '  0.6/15.7 GB'.length : 0)
+      return { showDetails, fits: widest <= columns }
+    }
+    expect(fits(44)).toEqual({ showDetails: true, fits: true })
+    expect(fits(30)).toEqual({ showDetails: false, fits: true })
+    expect(paneLayout(rows, 200).barWidth).toBe(30)
   })
 
   test('bars fill in eighths and keep their width', () => {

@@ -18,6 +18,8 @@ The Claude apps (desktop, web, mobile) don't show a plugin's status line, so `/s
 | `/sysmon off` | Stop sampling, clear the status line, close the pane |
 | `/sysmon on` | Start sampling again, status line only |
 
+In a terminal, sampling starts with the session. In the desktop app, VS Code and on the web it starts the first time you run `/sysmon`. Either way, `/sysmon on` and `/sysmon off` hold for the rest of the session, reloads included. Nothing starts by itself under `claude -p`.
+
 ## Install
 
 ```
@@ -28,13 +30,20 @@ The Claude apps (desktop, web, mobile) don't show a plugin's status line, so `/s
 
 | | CPU | RAM | GPU / GPU RAM |
 | --- | --- | --- | --- |
-| **Linux** | `/proc/stat` (busy time between samples) | `/proc/meminfo` (`MemTotal − MemAvailable`) | `nvidia-smi`; else AMD's `/sys/class/drm/card*/device` (`gpu_busy_percent`, `mem_info_vram_*`) |
+| **Linux** | `/proc/stat` (busy time between samples) | `/proc/meminfo` (`MemTotal − MemAvailable`) | `nvidia-smi`; else AMD's `/sys/class/drm/card0`–`card3` (the first with `gpu_busy_percent`; shown as one GPU) |
 | **macOS** | `top -l 2 -n 0 -s 1` | `vm_stat`, counted as Activity Monitor does (app + wired + compressed) | `ioreg` `IOAccelerator` stats. Apple silicon shares system memory, so GPU RAM is the GPU's share of it |
 | **Windows** | `Win32_Processor.LoadPercentage` | `Win32_OperatingSystem` | `nvidia-smi`; else the GPU performance counters (busiest engine, as Task Manager shows it; dedicated memory against the adapter's size) |
 
-On Windows one PowerShell process runs for the whole session and prints a sample per interval, so the monitor doesn't start a new PowerShell every few seconds. Nothing runs in headless sessions (`claude -p`).
+On Windows one PowerShell process runs for the whole session and prints a sample per interval, so the monitor doesn't start a new PowerShell every few seconds. It works under ConstrainedLanguage mode.
 
 Multiple NVIDIA GPUs show average utilization and pooled memory; on macOS with two GPUs, the busier one's utilization and the discrete GPU's VRAM.
+
+### Known limits
+
+- **Laptops with switchable NVIDIA graphics:** `nvidia-smi` wakes a discrete GPU that would otherwise sleep, so sampling it every few seconds costs battery. Raise `intervalSeconds`, or run `/sysmon off` on battery.
+- **macOS cost:** each sample runs `top` (about a second, sampling every process), `vm_stat` and `ioreg`.
+- **Containers and WSL** report the host's or VM's CPU and RAM, not cgroup limits.
+- **AMD APUs** report only their small dedicated VRAM carve-out, so GPU RAM can look full.
 
 ## Options
 
@@ -42,4 +51,4 @@ Multiple NVIDIA GPUs show average utilization and pooled memory; on macOS with t
 | --- | --- | --- |
 | `intervalSeconds` | `5` | How often to sample (minimum 2) |
 
-Set it from `/config`, or in `settings.json` under `pluginConfigs.sysmon.options`.
+Set it from `/config`.

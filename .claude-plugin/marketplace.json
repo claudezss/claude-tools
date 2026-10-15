@@ -10,7 +10,7 @@
     {
       "name": "sysmon",
       "source": "./mods/sysmon",
-      "description": "Shows CPU, RAM, GPU and GPU RAM usage in the status line on macOS, Windows and Linux",
+      "description": "Shows CPU, RAM, GPU and GPU RAM usage and totals in the status line or a live pane, on macOS, Windows and Linux",
       "category": "mod"
     }
   ]

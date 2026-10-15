@@ -51,10 +51,12 @@ function poll(intervalMs: number, sample: Promise<() => Promise<Usage>>, onUsage
       isBusy = false
     }
   }
-  void tick()
+  // A tick still running when the module unloads rejects; nothing is left to tell.
+  const safeTick = () => void tick().catch(() => {})
+  safeTick()
   // Linux CPU is a difference between two readings, so take the second soon.
-  const first = $.clock.after(1000, () => void tick())
-  const timer = $.clock.every(intervalMs, () => void tick())
+  const first = $.clock.after(1000, safeTick)
+  const timer = $.clock.every(intervalMs, safeTick)
   return {
     stop: () => {
       isStopped = true
@@ -65,7 +67,8 @@ function poll(intervalMs: number, sample: Promise<() => Promise<Usage>>, onUsage
 }
 
 async function run($: EngineInterface, argv: readonly string[]): Promise<string | undefined> {
-  const result = await $.process.run(argv, { timeoutMs: 10_000 }).catch(() => undefined)
+  // The C locale keeps `top` from writing decimal commas ("95,3% idle").
+  const result = await $.process.run(argv, { timeoutMs: 10_000, env: { LC_ALL: 'C' } }).catch(() => undefined)
   return result?.exitCode === 0 ? result.stdout : undefined
 }
 
@@ -161,8 +164,8 @@ while ($true) {
       if ($vram) { $s.gpuMemTotal = $vram; $s.gpuCount = $adapters.Count }
     }
   }
-  [Console]::Out.WriteLine(($s | ConvertTo-Json -Compress))
-  [Console]::Out.Flush()
+  # Plain pipeline output: [Console]::Out is refused under ConstrainedLanguage mode.
+  $s | ConvertTo-Json -Compress
   Start-Sleep -Seconds ${intervalSeconds}
 }
 `

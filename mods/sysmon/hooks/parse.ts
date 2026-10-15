@@ -65,7 +65,7 @@ export function parseNvidiaSmi(text: string): Gpu | undefined {
   const gpus = text
     .split('\n')
     .map(line => line.split(',').map(cell => num(cell.trim())))
-    .filter(cells => cells.length === 3 && cells.some(c => c !== undefined))
+    .filter(cells => cells.length === 3)
   if (gpus.length === 0) return undefined
 
   const utils = gpus.map(([util]) => util).filter((u): u is number => u !== undefined)
@@ -88,8 +88,8 @@ export function parseNvidiaSmi(text: string): Gpu | undefined {
 
 /** The CPU line of the last sample in `top -l 2 -n 0 -s 1` (the first sample is unreliable). */
 export function parseMacTopCpu(text: string): number | undefined {
-  const idles = [...text.matchAll(/CPU usage:.*?([\d.]+)% idle/g)]
-  const idle = num(idles.at(-1)?.[1])
+  const idles = [...text.matchAll(/CPU usage:.*?([\d.,]+)% idle/g)]
+  const idle = num(idles.at(-1)?.[1]?.replace(',', '.'))
   return idle === undefined ? undefined : Math.min(100, Math.max(0, 100 - idle))
 }
 
@@ -220,6 +220,17 @@ export function formatUsage(usage: Usage): string | undefined {
     ({ label, value, detail }) => `${label} ${Math.round(value)}%${detail ? ` (${detail})` : ''}`,
   )
   return parts.length > 0 ? parts.join(' · ') : undefined
+}
+
+/**
+ * How a pane row fits `columns`: the label (8), the bar, " 100%" (5), and the
+ * details ("  12.0/16.0 GB") only while they leave the bar at least 8 cells.
+ */
+export function paneLayout(rows: Row[], columns: number): { barWidth: number; showDetails: boolean } {
+  const detailWidth = Math.max(0, ...rows.map(row => (row.detail ? row.detail.length + 2 : 0)))
+  const room = columns - 13
+  const showDetails = room - detailWidth >= 8
+  return { barWidth: Math.max(4, Math.min(30, showDetails ? room - detailWidth : room)), showDetails }
 }
 
 /** A bar `width` cells wide, filled in eighths: `█████▍    `. */

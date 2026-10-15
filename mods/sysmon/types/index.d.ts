@@ -17,8 +17,11 @@ export type Usage = {
   gpuRamTotal?: number
 }
 
+/** What the person last asked for with /sysmon; `unset` until they do. Survives a reload. */
+export type Power = 'on' | 'off' | 'unset'
+
 declare module 'claude-code' {
   interface PluginState {
-    sysmon: { usage: Usage }
+    sysmon: { usage: Usage; power: Power }
   }
 }

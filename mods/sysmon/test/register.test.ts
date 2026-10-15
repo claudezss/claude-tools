@@ -155,6 +155,83 @@ test('/sysmon replies with the reading where no pane can be drawn', async ($, on
   expect((await sysmon()).text).toBe('RAM 75% (12.0/16.0 GB)  (no pane or status line in this client; run /sysmon again to refresh)')
 })
 
+test('/sysmon off holds across a reload; on restarts without a status-line surface', async ($, on) => {
+  const { clock, statuses } = engine(on)
+  on('ui.close', () => ({ value: undefined }))
+  on('process.run', (_, e) => (e.argv[0] === 'uname' ? ok('Linux\n') : missing))
+  on('fs.read', (_, e) => linuxFiles(e.path))
+  const sysmon = (args: string) =>
+    $.command.run({ command: 'sysmon', args, origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } })
+
+  await $.session.start(session)
+  await clock.settle()
+  await sysmon('off')
+  const seen = statuses.length
+  // A reload fires session.start again; the person's "off" stands.
+  await $.session.start(session)
+  await clock.advance(10_000)
+  expect(statuses.length).toBe(seen)
+
+  await sysmon('on')
+  await clock.settle()
+  const resumed = statuses.length
+  expect(resumed).toBeGreaterThan(seen)
+  // An SDK host (not interactive) reloads too: "on" restarts there.
+  await sysmon('off')
+  await sysmon('on')
+  await $.session.start({ ...session, isInteractive: false })
+  await clock.advance(5_000)
+  expect(statuses.length).toBeGreaterThan(resumed)
+})
+
+test('/sysmon after off does not report the old reading', async ($, on) => {
+  const { clock } = engine(on)
+  on('ui.open', () => ({ value: { isPlaced: false as const, reason: 'no-surface' } }))
+  on('ui.close', () => ({ value: undefined }))
+  on('process.run', (_, e) => (e.argv[0] === 'uname' ? ok('Linux\n') : missing))
+  on('fs.read', (_, e) => linuxFiles(e.path))
+  const sysmon = (args: string) =>
+    $.command.run({ command: 'sysmon', args, origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } })
+
+  await $.session.start(session)
+  await clock.settle()
+  await sysmon('off')
+  expect((await sysmon('')).text).toBe('System monitor on; the first reading takes a second or two. Run /sysmon again to see it.')
+})
+
+test('a stop during start leaves nothing running', async ($, on) => {
+  const { clock, statuses } = engine(on)
+  on('ui.close', () => ({ value: undefined }))
+  let releaseUname = () => {}
+  on('process.run', (_, e) =>
+    e.argv[0] === 'uname' ? new Promise(resolve => (releaseUname = () => resolve(ok('Linux\n')))) : missing,
+  )
+  on('fs.read', (_, e) => linuxFiles(e.path))
+  const sysmon = (args: string) =>
+    $.command.run({ command: 'sysmon', args, origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } })
+
+  await $.session.start({ ...session, isInteractive: false })
+  const starting = sysmon('on')
+  await clock.settle()
+  await sysmon('off')
+  releaseUname()
+  await starting
+  await clock.advance(20_000)
+  expect(statuses.filter(text => text !== undefined)).toHaveLength(0)
+})
+
+test('/sysmon with an unknown argument explains itself', async ($, on) => {
+  engine(on)
+  await $.session.start({ ...session, isInteractive: false })
+  const { text } = await $.command.run({
+    command: 'sysmon',
+    args: 'foo',
+    origin: { kind: 'composer' },
+    presentation: { isFullscreen: false, columns: 80 },
+  })
+  expect(text).toBe('Usage: /sysmon (open the pane), /sysmon on, /sysmon off')
+})
+
 test('a headless run starts nothing', async ($, on) => {
   const { clock, statuses } = engine(on)
 
