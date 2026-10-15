@@ -27,7 +27,7 @@ In the desktop app, click **+** next to the prompt box, then **Plugins** → **A
 
 | Name | Kind | Description |
 | --- | --- | --- |
-| _none yet_ | | |
+| [sysmon](mods/sysmon) | mod | CPU, RAM, GPU and GPU RAM usage and totals in the status line or a pane (macOS, Windows, Linux) |
 
 ## Repository layout
 

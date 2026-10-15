@@ -1,0 +1,17 @@
+{
+  "name": "sysmon",
+  "version": "0.1.0",
+  "description": "Shows CPU, RAM, GPU and GPU RAM usage and totals in the status line or a live pane, on macOS, Windows and Linux",
+  "author": {
+    "name": "claudezss"
+  },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "intervalSeconds": {
+      "type": "number",
+      "title": "Refresh interval (seconds)",
+      "description": "How often the usage is sampled; at least 2",
+      "default": 5
+    }
+  }
+}
