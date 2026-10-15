@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import {
+  bar,
   cpuBetween,
   formatUsage,
   parseIoreg,
@@ -10,6 +11,7 @@ import {
   parseProcStat,
   parseVmStat,
   parseWindowsSample,
+  usageRows,
 } from '../hooks/parse'
 import { encodePowerShell, windowsScript } from '../hooks/sources'
 import * as F from './fixtures/fixtures'
@@ -94,4 +96,20 @@ test('format leaves out what was not reported', () => {
   expect(formatUsage({ ram: 50 })).toBe('RAM 50%')
   expect(formatUsage({})).toBe(undefined)
   expect(formatUsage({ ram: 50, gpu: Number.NaN })).toBe('RAM 50%')
+})
+
+test('rows keep display order and color by level', () => {
+  expect(usageRows({ gpuRam: 95, cpu: 10, ram: 75 })).toEqual([
+    { label: 'CPU', value: 10, level: 'success' },
+    { label: 'RAM', value: 75, level: 'warning' },
+    { label: 'GPU RAM', value: 95, level: 'error' },
+  ])
+})
+
+test('bars fill in eighths and keep their width', () => {
+  expect(bar(0, 10)).toBe(' '.repeat(10))
+  expect(bar(100, 10)).toBe('█'.repeat(10))
+  expect(bar(50, 10)).toBe('█████     ')
+  expect(bar(55, 10)).toBe('█████▌    ')
+  expect(bar(150, 4)).toBe('████')
 })

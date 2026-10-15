@@ -107,24 +107,38 @@ test('windows streams samples from one powershell', async ($, on) => {
   expect(statuses.at(-1)).toBe('CPU 25% · RAM 75% · GPU 46% · GPU RAM 31%')
 })
 
-test('/sysmon turns it off and on', async ($, on) => {
+test('/sysmon opens the pane, /sysmon off stops everything, /sysmon on restarts', async ($, on) => {
   const { clock, statuses } = engine(on)
+  const panes: string[] = []
+  on('ui.open', (_, e) => {
+    panes.push(`open ${e.id}`)
+    return { value: { isPlaced: true as const } }
+  })
+  on('ui.close', (_, e) => {
+    panes.push(`close ${e.id}`)
+    return { value: undefined }
+  })
   on('process.run', (_, e) => (e.argv[0] === 'uname' ? ok('Linux\n') : missing))
   on('fs.read', (_, e) => linuxFiles(e.path))
+  const sysmon = (args: string) =>
+    $.command.run({ command: 'sysmon', args, origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } })
 
   await $.session.start(session)
   await clock.settle()
-  const run = () =>
-    $.command.run({ command: 'sysmon', args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } })
 
-  expect((await run()).text).toBe('System monitor off.')
+  expect((await sysmon('')).text).toBe('System monitor pane opened.')
+  expect(panes).toEqual(['open sysmon'])
+
+  expect((await sysmon('off')).text).toBe('System monitor off.')
+  expect(panes).toEqual(['open sysmon', 'close sysmon'])
   expect(statuses.at(-1)).toBe(undefined)
   await clock.advance(10_000)
   expect(statuses.at(-1)).toBe(undefined)
 
-  expect((await run()).text).toBe('System monitor on.')
+  expect((await sysmon('on')).text).toBe('System monitor on.')
   await clock.settle()
   expect(statuses.at(-1)).toBe('RAM 75%')
+  expect(panes).toHaveLength(2)
 })
 
 test('a headless run starts nothing', async ($, on) => {

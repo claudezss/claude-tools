@@ -1,13 +1,9 @@
 // Pure parsers for each platform's tool output. No `$` here, so they can be
 // tested directly against captured output.
 
-/** One reading; a field is undefined when the platform didn't report it. */
-export type Usage = {
-  cpu?: number
-  ram?: number
-  gpu?: number
-  gpuRam?: number
-}
+import type { Usage } from '../types'
+
+export type { Usage }
 
 /** Cumulative CPU time from the first line of Linux's /proc/stat. */
 export type CpuTimes = { idle: number; total: number }
@@ -148,16 +144,32 @@ export function parseWindowsSample(line: string): Usage | undefined {
 
 // --- Display -----------------------------------------------------------------
 
-export function formatUsage(usage: Usage): string | undefined {
-  const parts = (
-    [
-      ['CPU', usage.cpu],
-      ['RAM', usage.ram],
-      ['GPU', usage.gpu],
-      ['GPU RAM', usage.gpuRam],
-    ] as const
+export type Row = { label: string; value: number; level: 'success' | 'warning' | 'error' }
+
+/** The reported values, in display order, with a level for coloring. */
+export function usageRows(usage: Usage): Row[] {
+  const fields: [string, number | undefined][] = [
+    ['CPU', usage.cpu],
+    ['RAM', usage.ram],
+    ['GPU', usage.gpu],
+    ['GPU RAM', usage.gpuRam],
+  ]
+  return fields.flatMap(([label, value]) =>
+    value === undefined || !Number.isFinite(value)
+      ? []
+      : [{ label, value, level: value >= 90 ? 'error' : value >= 70 ? 'warning' : 'success' } as const],
   )
-    .filter(([, value]) => value !== undefined && Number.isFinite(value))
-    .map(([label, value]) => `${label} ${Math.round(value!)}%`)
+}
+
+/** The status line: `CPU 12% · RAM 48% · GPU 30% · GPU RAM 21%`. */
+export function formatUsage(usage: Usage): string | undefined {
+  const parts = usageRows(usage).map(({ label, value }) => `${label} ${Math.round(value)}%`)
   return parts.length > 0 ? parts.join(' · ') : undefined
+}
+
+/** A bar `width` cells wide, filled in eighths: `█████▍    `. */
+export function bar(value: number, width: number): string {
+  const eighths = Math.round((Math.min(100, Math.max(0, value)) / 100) * width * 8)
+  const partial = eighths % 8 === 0 ? '' : ' ▏▎▍▌▋▊▉'[eighths % 8]!
+  return ('█'.repeat(Math.floor(eighths / 8)) + partial).padEnd(width, ' ')
 }

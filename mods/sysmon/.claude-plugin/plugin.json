@@ -2,7 +2,10 @@
   "name": "sysmon",
   "version": "0.1.0",
   "description": "Shows CPU, RAM, GPU and GPU RAM usage in the status line on macOS, Windows and Linux",
-  "author": { "name": "claudezss" },
+  "author": {
+    "name": "claudezss"
+  },
+  "types": "./types/index.d.ts",
   "userConfig": {
     "intervalSeconds": {
       "type": "number",
