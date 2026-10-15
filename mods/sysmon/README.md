@@ -6,7 +6,15 @@ Shows CPU, RAM, GPU and GPU RAM usage in Claude Code's status line, refreshed ev
 CPU 12% · RAM 48% · GPU 30% · GPU RAM 21%
 ```
 
-GPU fields appear only when a GPU is found. `/sysmon` turns the line off and on for the session.
+GPU fields appear only when a GPU is found.
+
+The Claude apps (desktop, web, mobile) don't show a plugin's status line, so `/sysmon` also opens a live **System monitor** pane with a colored bar per value:
+
+| Command | |
+| --- | --- |
+| `/sysmon` | Open the pane (and start sampling if it was off) |
+| `/sysmon off` | Stop sampling, clear the status line, close the pane |
+| `/sysmon on` | Start sampling again, status line only |
 
 ## Install
 
