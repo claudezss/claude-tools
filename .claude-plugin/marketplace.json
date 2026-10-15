@@ -1,0 +1,8 @@
+{
+  "name": "claude-tools",
+  "owner": { "name": "claudezss" },
+  "metadata": {
+    "description": "Claude Code mods and plugins by claudezss"
+  },
+  "plugins": []
+}

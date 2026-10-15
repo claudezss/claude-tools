@@ -1,0 +1,14 @@
+# Types the engine lays beside a mod when it loads it
+**/.claude-plugin/types/
+
+# OS / editor
+.DS_Store
+*.swp
+*~
+.idea/
+.vscode/
+
+# Logs and caches
+*.log
+.mcpb-cache/
+node_modules/
