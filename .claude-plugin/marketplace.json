@@ -1,8 +1,17 @@
 {
   "name": "claude-tools",
-  "owner": { "name": "claudezss" },
+  "owner": {
+    "name": "claudezss"
+  },
   "metadata": {
     "description": "Claude Code mods and plugins by claudezss"
   },
-  "plugins": []
+  "plugins": [
+    {
+      "name": "sysmon",
+      "source": "./mods/sysmon",
+      "description": "Shows CPU, RAM, GPU and GPU RAM usage in the status line on macOS, Windows and Linux",
+      "category": "mod"
+    }
+  ]
 }

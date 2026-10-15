@@ -1,0 +1,14 @@
+{
+  "name": "sysmon",
+  "version": "0.1.0",
+  "description": "Shows CPU, RAM, GPU and GPU RAM usage in the status line on macOS, Windows and Linux",
+  "author": { "name": "claudezss" },
+  "userConfig": {
+    "intervalSeconds": {
+      "type": "number",
+      "title": "Refresh interval (seconds)",
+      "description": "How often the usage is sampled; at least 2",
+      "default": 5
+    }
+  }
+}
