@@ -141,6 +141,20 @@ test('/sysmon opens the pane, /sysmon off stops everything, /sysmon on restarts'
   expect(panes).toHaveLength(2)
 })
 
+test('/sysmon replies with the reading where no pane can be drawn', async ($, on) => {
+  const { clock } = engine(on)
+  on('ui.open', () => ({ value: { isPlaced: false as const, reason: 'no-surface: no surface is attached' } }))
+  on('process.run', (_, e) => (e.argv[0] === 'uname' ? ok('Linux\n') : missing))
+  on('fs.read', (_, e) => linuxFiles(e.path))
+  const sysmon = () =>
+    $.command.run({ command: 'sysmon', args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } })
+
+  await $.session.start({ ...session, isInteractive: false })
+  expect((await sysmon()).text).toBe('System monitor on; the first reading takes a second or two. Run /sysmon again to see it.')
+  await clock.settle()
+  expect((await sysmon()).text).toBe('RAM 75%  (no pane or status line in this client; run /sysmon again to refresh)')
+})
+
 test('a headless run starts nothing', async ($, on) => {
   const { clock, statuses } = engine(on)
 

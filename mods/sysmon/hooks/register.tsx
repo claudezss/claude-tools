@@ -54,7 +54,15 @@ export const register: Register = (on, options) => {
     if (arg === 'on') return { text: 'System monitor on.' }
 
     const opened = await $.ui.open({ id: PANE, title: 'System monitor' })
-    return { text: opened.isPlaced ? 'System monitor pane opened.' : `System monitor on; the pane waits: ${opened.reason}` }
+    if (opened.isPlaced) return { text: 'System monitor pane opened.' }
+    // Nothing can draw the pane or the status line here (a client with no
+    // surface attached), so the reply carries the reading itself.
+    const reading = formatUsage(await read($, usage))
+    return {
+      text: reading
+        ? `${reading}  (no pane or status line in this client; run /sysmon again to refresh)`
+        : 'System monitor on; the first reading takes a second or two. Run /sysmon again to see it.',
+    }
   })
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
