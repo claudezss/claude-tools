@@ -78,6 +78,7 @@ export const register: Register = (on, options) => {
             {row.label.padEnd(8)}
             <Text color={row.level}>{bar(row.value, width)}</Text>
             {` ${String(Math.round(row.value)).padStart(3)}%`}
+            {row.detail && <Text dimColor>{`  ${row.detail}`}</Text>}
           </Text>
         ))}
         <Text dimColor>{`every ${intervalSeconds}s · /sysmon off to stop`}</Text>

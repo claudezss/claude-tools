@@ -1,14 +1,16 @@
 # sysmon
 
-Shows CPU, RAM, GPU and GPU RAM usage in Claude Code's status line, refreshed every few seconds:
+Shows CPU, RAM, GPU and GPU RAM usage, with the totals behind them, in Claude Code's status line, refreshed every few seconds:
 
 ```
-CPU 12% · RAM 48% · GPU 30% · GPU RAM 21%
+CPU 12% (8 cores) · RAM 48% (7.7/16.0 GB) · GPU 30% (1 GPU) · GPU RAM 21% (5.0/24.0 GB)
 ```
+
+Cores are logical cores; GB are GiB, as the OS tools report them.
 
 GPU fields appear only when a GPU is found.
 
-The Claude apps (desktop, web, mobile) don't show a plugin's status line, so `/sysmon` also opens a live **System monitor** pane with a colored bar per value:
+The Claude apps (desktop, web, mobile) don't show a plugin's status line, so `/sysmon` also opens a live **System monitor** pane with a colored bar per value. Where the client draws nothing at all (a cloud session viewed in the app), `/sysmon` replies with the current reading instead.
 
 | Command | |
 | --- | --- |
@@ -32,7 +34,7 @@ The Claude apps (desktop, web, mobile) don't show a plugin's status line, so `/s
 
 On Windows one PowerShell process runs for the whole session and prints a sample per interval, so the monitor doesn't start a new PowerShell every few seconds. Nothing runs in headless sessions (`claude -p`).
 
-Multiple NVIDIA GPUs show average utilization and pooled memory.
+Multiple NVIDIA GPUs show average utilization and pooled memory; on macOS with two GPUs, the busier one's utilization and the discrete GPU's VRAM.
 
 ## Options
 

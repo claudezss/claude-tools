@@ -5,8 +5,11 @@
 import type { EngineInterface } from 'claude-code'
 
 import {
+  countProcStatCpus,
   cpuBetween,
+  gpuRamOf,
   parseIoreg,
+  parseMacSysctl,
   parseMacTopCpu,
   parseMeminfo,
   parseNvidiaSmi,
@@ -77,14 +80,14 @@ async function sampleUnix($: EngineInterface, platform: 'linux' | 'macos'): Prom
   const nvidia = async () => parseNvidiaSmi((await run($, NVIDIA_SMI)) ?? '')
 
   if (platform === 'macos') {
-    const memBytes = Number((await run($, ['sysctl', '-n', 'hw.memsize'])) ?? Number.NaN)
+    const { memBytes = Number.NaN, cpuCores } = parseMacSysctl((await run($, ['sysctl', '-n', 'hw.memsize', 'hw.logicalcpu'])) ?? '')
     return async () => {
       const [top, vmStat, gpu] = await Promise.all([
         run($, ['top', '-l', '2', '-n', '0', '-s', '1']),
         run($, ['vm_stat']),
         hasNvidia ? nvidia() : run($, ['ioreg', '-r', '-d', '1', '-w', '0', '-c', 'IOAccelerator']).then(text => parseIoreg(text ?? '', memBytes)),
       ])
-      return { cpu: parseMacTopCpu(top ?? ''), ram: parseVmStat(vmStat ?? '', memBytes), ...gpu }
+      return { cpu: parseMacTopCpu(top ?? ''), cpuCores, ...parseVmStat(vmStat ?? '', memBytes), ...gpu }
     }
   }
 
@@ -108,7 +111,8 @@ async function sampleUnix($: EngineInterface, platform: 'linux' | 'macos'): Prom
     const gpu = Number(busy)
     return {
       gpu: busy !== undefined && Number.isFinite(gpu) ? gpu : undefined,
-      gpuRam: Number.isFinite(vramUsed) && vramTotal > 0 ? (vramUsed / vramTotal) * 100 : undefined,
+      gpuCount: 1,
+      ...gpuRamOf(vramUsed, vramTotal),
     }
   }
 
@@ -122,7 +126,7 @@ async function sampleUnix($: EngineInterface, platform: 'linux' | 'macos'): Prom
     const times = parseProcStat(stat ?? '')
     const cpu = previous && times ? cpuBetween(previous, times) : undefined
     previous = times ?? previous
-    return { cpu, ram: parseMeminfo(meminfo ?? ''), ...gpu }
+    return { cpu, cpuCores: countProcStatCpus(stat ?? ''), ...parseMeminfo(meminfo ?? ''), ...gpu }
   }
 }
 
@@ -136,13 +140,15 @@ export function windowsScript(intervalSeconds: number): string {
   return `
 $ErrorActionPreference = 'SilentlyContinue'
 $nvidia = [bool](Get-Command nvidia-smi)
-$vram = (Get-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\0*' |
-  ForEach-Object { $_.'HardwareInformation.qwMemorySize' } | Measure-Object -Maximum).Maximum
+$cores = (Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors
+$adapters = @(Get-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\0*' |
+  ForEach-Object { $_.'HardwareInformation.qwMemorySize' } | Where-Object { $_ })
+$vram = ($adapters | Measure-Object -Maximum).Maximum
 while ($true) {
   # One statement per value: a query that fails leaves only its own value out.
   $cpu = (Get-CimInstance Win32_Processor | Measure-Object LoadPercentage -Average).Average
   $os = Get-CimInstance Win32_OperatingSystem
-  $s = [ordered]@{ cpu = $cpu; memTotalKb = $os.TotalVisibleMemorySize; memFreeKb = $os.FreePhysicalMemory }
+  $s = [ordered]@{ cpu = $cpu; cores = $cores; memTotalKb = $os.TotalVisibleMemorySize; memFreeKb = $os.FreePhysicalMemory }
   if ($nvidia) {
     $s.nvidiaSmi = (& ${NVIDIA_SMI.join(' ')}) -join "\`n"
   } else {
@@ -152,7 +158,7 @@ while ($true) {
         ForEach-Object { ($_.Group | Measure-Object UtilizationPercentage -Sum).Sum } | Measure-Object -Maximum).Maximum
       $s.gpuMemUsed = (Get-CimInstance Win32_PerfFormattedData_GPUPerformanceCounters_GPUAdapterMemory |
         Measure-Object DedicatedUsage -Maximum).Maximum
-      if ($vram) { $s.gpuMemTotal = $vram }
+      if ($vram) { $s.gpuMemTotal = $vram; $s.gpuCount = $adapters.Count }
     }
   }
   [Console]::Out.WriteLine(($s | ConvertTo-Json -Compress))

@@ -39,10 +39,10 @@ test('linux: ram first, cpu once there are two readings', async ($, on) => {
 
   await $.session.start(session)
   await clock.settle()
-  expect(statuses.at(-1)).toBe('RAM 75%')
+  expect(statuses.at(-1)).toBe('RAM 75% (12.0/16.0 GB)')
 
   await clock.advance(1000)
-  expect(statuses.at(-1)).toBe('CPU 20% · RAM 75%')
+  expect(statuses.at(-1)).toBe('CPU 20% (2 cores) · RAM 75% (12.0/16.0 GB)')
 })
 
 test('linux with an nvidia gpu', async ($, on) => {
@@ -52,7 +52,7 @@ test('linux with an nvidia gpu', async ($, on) => {
 
   await $.session.start(session)
   await clock.settle()
-  expect(statuses.at(-1)).toBe('RAM 75% · GPU 46% · GPU RAM 31%')
+  expect(statuses.at(-1)).toBe('RAM 75% (12.0/16.0 GB) · GPU 46% (2 GPUs) · GPU RAM 31% (5.0/16.0 GB)')
 })
 
 test('linux with an amd gpu', async ($, on) => {
@@ -67,7 +67,7 @@ test('linux with an amd gpu', async ($, on) => {
 
   await $.session.start(session)
   await clock.settle()
-  expect(statuses.at(-1)).toBe('RAM 75% · GPU 64% · GPU RAM 25%')
+  expect(statuses.at(-1)).toBe('RAM 75% (12.0/16.0 GB) · GPU 64% (1 GPU) · GPU RAM 25% (2.0/8.0 GB)')
 })
 
 test('macos', async ($, on) => {
@@ -75,7 +75,7 @@ test('macos', async ($, on) => {
   on('process.run', (_, e) => {
     switch (e.argv[0]) {
       case 'uname': return ok('Darwin\n')
-      case 'sysctl': return ok(`${F.MAC_MEM_BYTES}\n`)
+      case 'sysctl': return ok(`${F.MAC_MEM_BYTES}\n10\n`)
       case 'top': return ok(F.MAC_TOP)
       case 'vm_stat': return ok(F.MAC_VM_STAT)
       case 'ioreg': return ok(F.MAC_IOREG_APPLE)
@@ -85,7 +85,7 @@ test('macos', async ($, on) => {
 
   await $.session.start(session)
   await clock.settle()
-  expect(statuses.at(-1)).toBe('CPU 20% · RAM 50% · GPU 12% · GPU RAM 10%')
+  expect(statuses.at(-1)).toBe('CPU 20% (10 cores) · RAM 50% (8.0/16.0 GB) · GPU 12% (1 GPU) · GPU RAM 10% (1.6/16.0 GB)')
 })
 
 test('windows streams samples from one powershell', async ($, on) => {
@@ -103,8 +103,8 @@ test('windows streams samples from one powershell', async ($, on) => {
   await clock.settle()
   expect(spawned).toHaveLength(1)
   expect(spawned[0]!.slice(0, 4)).toEqual(['powershell', '-NoProfile', '-NonInteractive', '-EncodedCommand'])
-  expect(statuses).toContain('CPU 25% · RAM 75% · GPU 40% · GPU RAM 25%')
-  expect(statuses.at(-1)).toBe('CPU 25% · RAM 75% · GPU 46% · GPU RAM 31%')
+  expect(statuses).toContain('CPU 25% (8 cores) · RAM 75% (12.0/16.0 GB) · GPU 40% (1 GPU) · GPU RAM 25% (2.0/8.0 GB)')
+  expect(statuses.at(-1)).toBe('CPU 25% (8 cores) · RAM 75% (12.0/16.0 GB) · GPU 46% (2 GPUs) · GPU RAM 31% (5.0/16.0 GB)')
 })
 
 test('/sysmon opens the pane, /sysmon off stops everything, /sysmon on restarts', async ($, on) => {
@@ -137,7 +137,7 @@ test('/sysmon opens the pane, /sysmon off stops everything, /sysmon on restarts'
 
   expect((await sysmon('on')).text).toBe('System monitor on.')
   await clock.settle()
-  expect(statuses.at(-1)).toBe('RAM 75%')
+  expect(statuses.at(-1)).toBe('RAM 75% (12.0/16.0 GB)')
   expect(panes).toHaveLength(2)
 })
 
@@ -152,7 +152,7 @@ test('/sysmon replies with the reading where no pane can be drawn', async ($, on
   await $.session.start({ ...session, isInteractive: false })
   expect((await sysmon()).text).toBe('System monitor on; the first reading takes a second or two. Run /sysmon again to see it.')
   await clock.settle()
-  expect((await sysmon()).text).toBe('RAM 75%  (no pane or status line in this client; run /sysmon again to refresh)')
+  expect((await sysmon()).text).toBe('RAM 75% (12.0/16.0 GB)  (no pane or status line in this client; run /sysmon again to refresh)')
 })
 
 test('a headless run starts nothing', async ($, on) => {
