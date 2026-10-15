@@ -1,5 +1,5 @@
 # Types the engine lays beside a mod when it loads it
-.claude-plugin/types/
+**/.claude-plugin/types/
 
 # OS / editor
 .DS_Store

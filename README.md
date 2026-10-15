@@ -40,11 +40,11 @@ mods/<name>/                      function-hook mods
   hooks/*.test.ts                 run with `claude plugin test`
 plugins/<name>/                   classic plugins
   .claude-plugin/plugin.json
-  commands/  skills/  agents/  hooks/hooks.json  .mcp.json
+  skills/  agents/  commands/  hooks/hooks.json  .mcp.json
 templates/                        what scripts/new.mjs copies
 scripts/
   new.mjs                         scaffold a mod or plugin and list it
-  validate.sh                     validate everything, run mod tests
+  validate.mjs                    validate everything, run mod tests
 ```
 
 ## Development
@@ -65,14 +65,14 @@ claude --plugin-dir mods/my-mod
 Or add this checkout as a marketplace, so installed entries are read straight from the folder (`/reload-plugins` picks up edits):
 
 ```sh
-claude plugin marketplace add .
+claude plugin marketplace add ./
 claude plugin install my-mod@claude-tools
 ```
 
-Before committing, validate the marketplace and every entry, and run the mods' tests:
+Before committing, validate the marketplace and every entry, check that entries and folders agree, and run the mods' tests:
 
 ```sh
-scripts/validate.sh
+node scripts/validate.mjs
 ```
 
 The mod API's TypeScript declarations are written by the engine into `<mod>/.claude-plugin/types/` the first time it loads the mod (git-ignored); with them in place, `tsc -p mods/my-mod` type-checks it. The mod API is early access and may change between Claude Code releases.

@@ -7,7 +7,7 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: '__NAME__',
-      description: '__DESCRIPTION__',
+      description: "__DESCRIPTION__",
     })
 
     return next(e)
